@@ -725,14 +725,22 @@
       }
       
       videoPlayerElement.style.display = 'block';
+      
+      // 複数の埋め込み方法を試す
+      const embedUrl = `${currentApiBase}/embed/${video.videoId}?autoplay=1`;
+      const watchUrl = `${currentApiBase}/watch?v=${video.videoId}`;
+      
       videoPlayerElement.innerHTML = `
         <div class="video-container">
           <iframe
-            src="${currentApiBase}/embed/${video.videoId}"
+            src="${embedUrl}"
             title="${video.title || 'Video'}"
+            frameborder="0"
             allowfullscreen
-            sandbox="allow-same-origin allow-scripts allow-popups"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             loading="lazy"
+            referrerpolicy="no-referrer"
+            allow="autoplay; fullscreen"
           ></iframe>
         </div>
         <div class="video-info">
@@ -740,6 +748,7 @@
           <div class="video-meta">
             <span>${formatViews(video.viewCount)}</span>
             <span>${formatDate(video.published)}</span>
+            <a href="${watchUrl}" target="_blank">別ウィンドウで開く</a>
           </div>
           <div class="channel-info">
             <div class="channel-avatar"></div>
@@ -748,6 +757,13 @@
           <p class="video-description">${formatDescription(video.description)}</p>
         </div>
       `;
+      
+      // iframeの読み込みエラーを監視
+      const iframe = videoPlayerElement.querySelector('iframe');
+      iframe.onerror = () => {
+        console.error('iframe load error');
+        showError('動画の読み込みに失敗しました。別ウィンドウで開くか、別のインスタンスを試してください。');
+      };
       
       // スクロールを上に移動
       window.scrollTo({top: 0, behavior: 'smooth'});
