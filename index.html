@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invidious Viewer</title>
+  <style>
+    :root {
+      --primary-color: #ff0000;
+      --primary-hover: #cc0000;
+      --bg-color: #f9fafb;
+      --text-color: #333333;
+      --card-bg: #ffffff;
+      --card-hover: #f0f0f0;
+      --header-bg: #ffffff;
+      --footer-bg: #f0f0f0;
+      --shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .dark-mode {
+      --bg-color: #1f2937;
+      --text-color: #e5e7eb;
+      --card-bg: #374151;
+      --card-hover: #4b5563;
+      --header-bg: #111827;
+      --footer-bg: #111827;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header Styles */
+    header {
+      background-color: var(--header-bg);
+      box-shadow: var(--shadow);
+      padding: 15px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    @media (min-width: 768px) {
+      .header-container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .site-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 5px 10px;
+      border-radius: 50%;
+      color: var(--text-color);
+      background-color: var(--card-hover);
+    }
+
+    .search-form {
+      display: flex;
+      flex: 1;
+      max-width: 600px;
+    }
+
+    .search-input {
+      flex-grow: 1;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      font-size: 1rem;
+    }
+
+    .dark-mode .search-input {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: var(--text-color);
+    }
+
+    .search-button {
+      padding: 10px 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
+
+    .search-button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Main Content Styles */
+    main {
+      padding: 30px 0;
+    }
+
+    .error-container {
+      background-color: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #b91c1c;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .dark-mode .error-container {
+      background-color: #7f1d1d;
+      border-color: #ef4444;
+      color: #fecaca;
+    }
+
+    .retry-button {
+      margin-left: 15px;
+      color: #2563eb;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .dark-mode .retry-button {
+      color: #93c5fd;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Video Player Styles */
+    .video-player {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: 30px;
+    }
+
+    .video-container {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+      overflow: hidden;
+    }
+
+    .video-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .video-info {
+      padding: 20px;
+    }
+
+    .video-title {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+
+    .video-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .dark-mode .video-meta {
+      color: #d1d5db;
+    }
+
+    .channel-info {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .channel-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #e5e7eb;
+      margin-right: 12px;
+    }
+
+    .channel-name {
+      font-weight: 500;
+    }
+
+    .video-description {
+      color: #4b5563;
+      line-height: 1.7;
+    }
+
+    .dark-mode .video-description {
+      color: #d1d5db;
+    }
+
+    /* Video Grid Styles */
+    .section-title {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .video-card {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .video-card:hover {
+      transform: translateY(-5px);
+      background-color: var(--card-hover);
+    }
+
+    .thumbnail-container {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .duration-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .card-content {
+      padding: 12px;
+    }
+
+    .card-title {
+      font-weight: 500;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-channel {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .dark-mode .card-channel {
+      color: #9ca3af;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .dark-mode .card-meta {
+      color: #9ca3af;
+    }
+
+    /* Footer Styles */
+    footer {
+      background-color: var(--footer-bg);
+      padding: 30px 0;
+      margin-top: 50px;
+    }
+
+    .footer-content {
+      text-align: center;
+    }
+
+    .api-info {
+      margin-bottom: 15px;
+    }
+
+    .copyright {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .dark-mode .copyright {
+      color: #9ca3af;
+    }
+
+    .text-truncate {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-container">
+      <div class="logo-container">
+        <h1 class="site-title">Invidious Viewer</h1>
+        <button id="theme-toggle" class="theme-toggle">🌙</button>
+      </div>
+      <form id="search-form" class="search-form">
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="動画を検索..."
+          required
+        />
+        <button type="submit" class="search-button">検索</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="error-container" class="error-container" style="display: none">
+      <span id="error-message"></span>
+      <button id="retry-button" class="retry-button">別のインスタンスを試す</button>
+    </div>
+
+    <div id="loading" class="loading" style="display: none">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="video-player" class="video-player" style="display: none"></div>
+
+    <div id="videos-section">
+      <h2 id="section-title" class="section-title">トレンド動画</h2>
+      <div id="videos-grid" class="videos-grid"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container footer-content">
+      <div class="api-info">
+        <p>このアプリケーションはInvidiousのAPIを使用しています</p>
+        <p style="margin-top: 10px;">
+          現在のAPI: <span id="current-api"></span>
+          <button id="change-instance" class="retry-button">別のインスタンスを試す</button>
+        </p>
+      </div>
+      <p class="copyright">© <span id="current-year"></span> Invidious Viewer</p>
+    </div>
+  </footer>
+
+  <script>
+    // 設定
+    const INVIDIOUS_INSTANCES = [
+      "https://invidious.snopyta.org",
+      "https://yewtu.be",
+      "https://invidious.kavin.rocks",
+      "https://vid.puffyan.us",
+      "https://invidious.namazso.eu"
+    ];
+
+    // グローバル変数
+    let currentApiBase = INVIDIOUS_INSTANCES[0];
+    let currentVideos = [];
+    let selectedVideo = null;
+    let isSearchResults = false;
+
+    // DOM要素
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const themeToggle = document.getElementById('theme-toggle');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const retryButton = document.getElementById('retry-button');
+    const loadingElement = document.getElementById('loading');
+    const videoPlayerElement = document.getElementById('video-player');
+    const sectionTitle = document.getElementById('section-title');
+    const videosGrid = document.getElementById('videos-grid');
+    const currentApiSpan = document.getElementById('current-api');
+    const changeInstanceButton = document.getElementById('change-instance');
+    const currentYearSpan = document.getElementById('current-year');
+
+    // 初期化
+    function init() {
+      // 現在のAPIインスタンスを表示
+      currentApiSpan.textContent = currentApiBase;
+      // 現在の年を表示
+      currentYearSpan.textContent = new Date().getFullYear();
+      // ローカルストレージからダークモード設定を取得
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+        themeToggle.textContent = '☀️';
+      }
+      // URLからビデオIDを取得する
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoId = urlParams.get('v');
+      if (videoId) {
+        fetchVideoDetails(videoId);
+      } else {
+        // トレンド動画を読み込む
+        fetchTrending();
+      }
+
+      // イベントリスナーを設定
+      setupEventListeners();
+    }
+
+    // イベントリスナーのセットアップ
+    function setupEventListeners() {
+      // 検索フォームのイベント
+      searchForm.addEventListener('submit', handleSearch);
+      
+      // リトライボタンのイベント
+      retryButton.addEventListener('click', tryAnotherInstance);
+      changeInstanceButton.addEventListener('click', tryAnotherInstance);
+      
+      // テーマ切り替えのイベント
+      themeToggle.addEventListener('click', toggleDarkMode);
+
+      // ブラウザの戻るボタン対応
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    // テーマの切り替え
+    function toggleDarkMode() {
+      const isDarkMode = document.body.classList.toggle('dark-mode');
+      themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+      localStorage.setItem('darkMode', isDarkMode);
+    }
+
+    // トレンド動画の取得
+    async function fetchTrending() {
+      try {
+        showLoading();
+        hideError();
+        const response = await fetch(`${currentApiBase}/api/v1/trending`);
+        if (!response.ok) throw new Error('トレンド動画の取得に失敗しました');
+        const data = await response.json();
+        currentVideos = data;
+        isSearchResults = false;
+        sectionTitle.textContent = 'トレンド動画';
+        renderVideos(data);
+        hideLoading();
+      } catch (err) {
+        showError(err.message);
+        hideLoading();
+      }
+    }
+
+    // 検索処理
+    async function handleSearch(e) {
+      e.preventDefault();
+      const query = searchInput.value.trim();
+      if (!query) return;
+
+      try {
+        showLoading();
+        hideError();
+        const response = await fetch(`${currentApiBase}/api/v1/search?q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error('検索に失敗しました');
+        const data = await response.json();
+        currentVideos = data;
+        isSearchResults = true;
+        sectionTitle.textContent = `「${query}」の検索結果`;
+        renderVideos(data);
+        hideLoading();
+      } catch (err) {
+        showError(err.message);
+        hideLoading();
+      }
+    }
+
+    // 動画の詳細を取得
+    async function fetchVideoDetails(videoId) {
+      try {
+        showLoading();
+        hideError();
+        const response = await fetch(`${currentApiBase}/api/v1/videos/${videoId}`);
+        if (!response.ok) throw new Error('動画情報の取得に失敗しました');
+        const data = await response.json();
+        selectedVideo = data;
+        renderVideoPlayer(data);
+        hideLoading();
+      } catch (err) {
+        showError(err.message);
+        hideLoading();
+      }
+    }
+
+    // 別のインスタンスを試す
+    function tryAnotherInstance() {
+      const currentIndex = INVIDIOUS_INSTANCES.indexOf(currentApiBase);
+      const nextIndex = (currentIndex + 1) % INVIDIOUS_INSTANCES.length;
+      currentApiBase = INVIDIOUS_INSTANCES[nextIndex];
+      currentApiSpan.textContent = currentApiBase;
+      
+      // 現在表示中のコンテンツを再取得
+      if (selectedVideo) {
+        fetchVideoDetails(selectedVideo.videoId);
+      } else if (isSearchResults && searchInput.value.trim()) {
+        handleSearch(new Event('submit'));
+      } else {
+        fetchTrending();
+      }
+    }
+
+    // 動画カードのレンダリング
+    function renderVideos(videos) {
+      videosGrid.innerHTML = '';
+      videos.forEach(video => {
+        const thumbnailUrl = video.videoThumbnails && video.videoThumbnails.length > 0 
+            ? video.videoThumbnails[0].url 
+            : `https://via.placeholder.com/320x180?text=No+Thumbnail`;
+        
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.dataset.videoId = video.videoId;
+        card.innerHTML = `
+          <div class="thumbnail-container">
+            <img src="${thumbnailUrl}" alt="${video.title}" class="thumbnail">
+            <span class="duration-badge">${formatDuration(video.lengthSeconds)}</span>
+          </div>
+          <div class="card-content">
+            <h3 class="card-title">${video.title}</h3>
+            <p class="card-channel">${video.author}</p>
+            <div class="card-meta">
+              <span>${formatViews(video.viewCount)}</span>
+              <span>${formatDate(video.published)}</span>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          // 動画IDをURLに設定
+          window.history.pushState({videoId: video.videoId}, '', `?v=${video.videoId}`);
+          fetchVideoDetails(video.videoId);
+        });
+        videosGrid.appendChild(card);
+      });
+    }
+
+    // 動画プレーヤーのレンダリング
+    function renderVideoPlayer(video) {
+      videoPlayerElement.style.display = 'block';
+      videoPlayerElement.innerHTML = `
+        <div class="video-container">
+          <iframe
+            src="${currentApiBase}/embed/${video.videoId}"
+            title="${video.title}"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <div class="video-info">
+          <h2 class="video-title">${video.title}</h2>
+          <div class="video-meta">
+            <span>${formatViews(video.viewCount)}</span>
+            <span>${formatDate(video.published)}</span>
+          </div>
+          <div class="channel-info">
+            <div class="channel-avatar"></div>
+            <div class="channel-name">${video.author}</div>
+          </div>
+          <p class="video-description">${formatDescription(video.description)}</p>
+        </div>
+      `;
+      
+      // スクロールを上に移動
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    // ブラウザの戻るボタン対応
+    function handlePopState(event) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoId = urlParams.get('v');
+      
+      if (videoId) {
+        fetchVideoDetails(videoId);
+      } else {
+        // プレーヤーを非表示にする
+        videoPlayerElement.style.display = 'none';
+        selectedVideo = null;
+        
+        // 既に読み込んだ動画リストを表示
+        if (currentVideos.length > 0) {
+          renderVideos(currentVideos);
+        } else {
+          fetchTrending();
+        }
+      }
+    }
+
+    // ユーティリティ関数
+    function formatDuration(seconds) {
+      if (!seconds) return '--:--';
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function formatViews(views) {
+      if (!views) return '0 回視聴';
+      if (views >= 1000000) {
+        return `${(views / 1000000).toFixed(1)}M 回視聴`;
+      }
+      if (views >= 1000) {
+        return `${(views / 1000).toFixed(1)}K 回視聴`;
+      }
+      return `${views} 回視聴`;
+    }
+
+    function formatDate(timestamp) {
+      if (!timestamp) return '';
+      return new Date(timestamp * 1000).toLocaleDateString();
+    }
+
+    function formatDescription(description) {
+      if (!description) return 'No description';
+      // 改行をHTMLの改行に変換
+      return description
+        .replace(/\n/g, '<br>')
+        // URLをリンクに変換
+        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+    }
+
+    // UI状態制御
+    function showLoading() {
+      loadingElement.style.display = 'flex';
+    }
+
+    function hideLoading() {
+      loadingElement.style.display = 'none';
+    }
+
+    function showError(message) {
+      errorMessage.textContent = `エラー: ${message}`;
+      errorContainer.style.display = 'block';
+    }
+
+    function hideError() {
+      errorContainer.style.display = 'none';
+    }
+
+    // アプリケーションの初期化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
